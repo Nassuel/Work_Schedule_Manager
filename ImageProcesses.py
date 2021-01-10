@@ -27,6 +27,11 @@ class ImageReaderAndParser(object):
         return
 
     def _image_cropper(self) -> Any:
+        """
+        Crops the work schedule table on the image
+
+        Further work: Make the cropping more dynamic as it's pretty hardcoded atm
+        """
         # file = r'D:\\Repos\\Create_Calendar_Event_From_Pic\\142021-1102021_schedule.jpg'
         # img = cv2.imread(file)
         height, width, channels = self.img.shape
@@ -41,7 +46,9 @@ class ImageReaderAndParser(object):
     
     def chop_image(self) -> List[Any]:
         """
-        Chops image into pieces to have an easier time when parsing through each row of the table
+        Chops image into pieces to have an easier time when parsing through each row of the schedule table of the image
+
+        Further work:
         """
         img = self._image_cropper()
         slice_height = int(self.h / 8)
@@ -58,9 +65,9 @@ class ImageReaderAndParser(object):
 
     def image_processor(self, img, img_slice_index) -> None:
         """
-        Code readapted from these sites:
-        https://medium.com/analytics-vidhya/how-to-detect-tables-in-images-using-opencv-and-python-6a0f15e560c3
-        https://www.geeksforgeeks.org/text-detection-and-extraction-using-opencv-and-ocr/     
+        Pass through an slice of an image and its index for a file to be created.
+        
+        Further work: Could be reworked to append to the same file and have a unique divider in between slices
         """
         # Convert the image to gray scale 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
