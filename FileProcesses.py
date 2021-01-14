@@ -7,7 +7,7 @@ from typing import Any, List
 
 from pandas.core.frame import DataFrame
 
-class FileParser(object):
+class FileParser():
 
     def __init__(self, img_filename_path: str, verbose=False) -> None:
         self.verbose = verbose

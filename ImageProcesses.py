@@ -7,7 +7,7 @@ from typing import Any, List
 # Mention the installed location of Tesseract-OCR in your system
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
-class ImageReaderAndParser(object):
+class ImageReaderAndParser():
     # Read image from which text needs to be extracted
     
     def __init__(self, img_filename_path: str, show_detect_jpg=False, verbose=False) -> None:
@@ -23,6 +23,7 @@ class ImageReaderAndParser(object):
         height, width, channels = self.img.shape
         if self.verbose: print(height, width, channels)
         cv2.imshow('image', self._image_cropper())
+        # print(self.y, self.h, self.x, self.w)
         cv2.waitKey(0)
         return
 
@@ -34,13 +35,18 @@ class ImageReaderAndParser(object):
         """
         # file = r'D:\\Repos\\Create_Calendar_Event_From_Pic\\142021-1102021_schedule.jpg'
         # img = cv2.imread(file)
-        height, width, channels = self.img.shape
-        self.y = int(height * 630 / height)
-        self.h = int(height * 560 / height) # 560
+        set_width = 2426
+        set_height = 1286
+        img = cv2.resize(self.img, dsize=(set_width, set_height), interpolation=cv2.INTER_AREA)
+        height, width, channels = img.shape
+        # print('Resized', height, width, channels)
 
-        self.x = int(width * 100 / width)
-        self.w = int(((width * 2120) / width) * 5/8) # 2290
-        crop_img = self.img[self.y:self.y+self.h, self.x:self.x+self.w].copy()
+        self.y = int(height * 615/1286)
+        self.h = int(height * 560/1286) # 560
+
+        self.x = int(width * 50 /2426)
+        self.w = int(width * 1325/2426) # 2290 ((width * 2120) / width) * 5/8
+        crop_img = img[self.y:self.y+self.h, self.x:self.x+self.w].copy()
 
         return crop_img
     
@@ -55,7 +61,7 @@ class ImageReaderAndParser(object):
         changing_y = self.y
         img_slices = []
 
-        print(changing_y, self.h)
+        # print(changing_y, self.h)
         while changing_y <= self.h + self.y - slice_height:
             img_slices.append({'img':self.img[changing_y:changing_y+slice_height, self.x:self.x+self.w].copy(), 
                                 'changing_y': changing_y})
