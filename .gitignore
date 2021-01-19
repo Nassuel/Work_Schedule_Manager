@@ -129,6 +129,5 @@ dmypy.json
 .pyre/
 
 # Extra ignores
-crop_image_test.py
 *.jpg
 *.ics

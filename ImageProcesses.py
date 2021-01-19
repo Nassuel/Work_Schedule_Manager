@@ -1,5 +1,7 @@
+import os
 import cv2
 import pytesseract
+import numpy as np
 import matplotlib.pyplot as plt
 
 from typing import Any, List
@@ -15,8 +17,7 @@ class ImageReaderAndParser():
         self.verbose = verbose
         self.file = img_filename_path
         self.show_detected_text_pic = show_detect_jpg
-        self.file_name = self.file.split('/')[-1].split('.')[0]
-        self.output_textfile_name = "./Recognized_Texts/recognized_{0}.txt".format(self.file_name)
+        self.file_name = self.file.split('\\')[-1].split('.')[0]
         self.img = cv2.imread(self.file)
 
     def _image_info(self) -> None:
@@ -27,7 +28,7 @@ class ImageReaderAndParser():
         cv2.waitKey(0)
         return
 
-    def _image_cropper(self) -> Any:
+    def _image_cropper(self, save_in_file, aug_x=0, aug_y=0) -> Any:
         """
         Crops the work schedule table on the image
 
@@ -46,28 +47,71 @@ class ImageReaderAndParser():
 
         self.x = int(width * 50 /2426)
         self.w = int(width * 1325/2426) # 2290 ((width * 2120) / width) * 5/8
-        crop_img = img[self.y:self.y+self.h, self.x:self.x+self.w].copy()
+        crop_img = img[self.y+aug_y:self.y+self.h, self.x+aug_x:self.x+self.w].copy()
+
+        if save_in_file is not None:
+            cv2.imwrite(save_in_file, crop_img)
 
         return crop_img
     
-    def chop_image(self) -> List[Any]:
+    def chop_image(self, img) -> List[Any]:
         """
         Chops image into pieces to have an easier time when parsing through each row of the schedule table of the image
 
         Further work:
         """
-        img = self._image_cropper()
-        slice_height = int(self.h / 8)
-        changing_y = self.y
+        # img = self._image_cropper()
+        height, width, channels = img.shape
+        slice_height = int(height / 8)
+        changing_y = 0
         img_slices = []
 
         # print(changing_y, self.h)
-        while changing_y <= self.h + self.y - slice_height:
-            img_slices.append({'img':self.img[changing_y:changing_y+slice_height, self.x:self.x+self.w].copy(), 
-                                'changing_y': changing_y})
+        while changing_y <= height - slice_height:
+            img_slices.append({'img':img[changing_y:changing_y+slice_height+10, 0:width].copy(), 'changing_y': changing_y})
             changing_y += slice_height
 
         return img_slices
+
+    def detect_table(self, img):
+        """        
+        TODO: Make it work. Doesn't quite detect the table in the picture 😭
+        """
+        # Convert the image to gray scale 
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Performing OTSU threshold 
+        ret, thresh1 = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY_INV)
+
+        # Specify structure shape and kernel size.  
+        # Kernel size increases or decreases the area  
+        # of the rectangle to be detected. 
+        # A smaller value like (10, 10) will detect  
+        # each word instead of a sentence. 
+        # rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+        kernel = np.ones((50,50),np.uint8)
+        
+        # Appplying dilation on the threshold image 
+        dilation = cv2.dilate(thresh1, kernel, iterations = 1)
+        
+        # Finding contours 
+        contours, hierarchy = cv2.findContours(dilation,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+        
+        # Creating a copy of image 
+        im2 = img.copy()
+
+        sums = []
+        coordinates = []
+        # Need to get the biggest countured rectangle on the image and then getting its coordinates
+        for index, cnt in enumerate(contours):
+            x, y, w, h = cv2.boundingRect(cnt)
+
+            # return im2[y+90:y+h-80, x:x+w-170].copy()
+            sums.append(x+y+w+h)
+            coordinates.append((x,y,w,h))
+
+        x, y, w, h = coordinates[sums.index(max(sums))]
+        return im2[y:y+h, x:x+w].copy()
 
     def image_processor(self, img, img_slice_index) -> None:
         """
@@ -98,7 +142,7 @@ class ImageReaderAndParser():
         im2 = img.copy()
         
         # A text file is created and flushed
-        txt_filename = "./Recognized_Texts/recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index))
+        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index)))
         file = open(txt_filename, "w+") 
         file.write("") 
         file.close() 
@@ -137,16 +181,19 @@ class ImageReaderAndParser():
             
         return
 
-
 def main():
-    file_location = './Pictures/1-11-2021_1-17-2021_schedule.jpg'
+    file_location = os.path.join("Pictures", "2-1-2021_2-7-2021_schedule.jpg")
+    pre_file = os.path.join("Pictures", "pre.png")
     img_rd_prsr = ImageReaderAndParser(file_location,show_detect_jpg=False)
+    # detected_table_img = img_rd_prsr.detect_table(img_rd_prsr.img)
+    array = img_rd_prsr.chop_image(img_rd_prsr._image_cropper(pre_file, aug_y=5))
     # cv2.imshow('image', img_rd_prsr._image_cropper())
     # cv2.waitKey(0)
-    array = img_rd_prsr.chop_image()
-    print(array)
-    for index, dict in enumerate(array):
-        img_rd_prsr.image_processor(dict['img'], index)
+    # print(array)
+    # for index, dict in enumerate(array):
+        # cv2.imshow('image', dict['img'])
+        # cv2.waitKey(0)
+        # img_rd_prsr.image_processor(dict['img'], index)
 
     
         

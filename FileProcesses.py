@@ -1,24 +1,24 @@
 import re
+import os
+import math
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-
 from typing import Any, List
-
 from pandas.core.frame import DataFrame
+from datetime import datetime, timedelta
 
 class FileParser():
 
     def __init__(self, img_filename_path: str, verbose=False) -> None:
         self.verbose = verbose
         self.file = img_filename_path
-        self.file_name = self.file.split('/')[-1].split('.')[0]
+        self.file_name = self.file.split('\\')[-1].split('.')[0]
         self.df_file_location = './Schedule_Dfs/'+self.file_name+'.csv'
         self.rx_dict = {
-        'date': re.compile(r'^([1-9]|1[012])[- /.]([1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$'),
-        'day': re.compile(r'Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday'),
-        'time': re.compile(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9] PM$|^([0-1]?[0-9]|2[0-3]):[0-5][0-9] AM$'),
-        'number': re.compile(r'(?<!&#|\d[:\/-])(\d+(?:\.\d+)?)(?!%|[:\/-]\d)')
+            'date': re.compile(r'^([1-9]|1[012])[- /.]([1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$'),
+            'day': re.compile(r'Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday'),
+            'time': re.compile(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9] PM$|^([0-1]?[0-9]|2[0-3]):[0-5][0-9] AM$'),
+            'number': re.compile(r'(?<!&#|\d[:\/-])(\d+(?:\.\d+)?)(?!%|[:\/-]\d)')
         }
 
     def _parse_line(self, line) -> Any:
@@ -30,7 +30,7 @@ class FileParser():
 
     def parse_file(self, img_slice_index) -> dict:
         self.data = []
-        txt_filename = "./Recognized_Texts/recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index))
+        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index)))
         with open(txt_filename, 'r') as file:
             time_count = 0
             line_data = {}
@@ -77,8 +77,7 @@ class FileParser():
 
         for row in self.df.iterrows():
             actual_row = row[1]
-            # print(actual_row.start_time, type(actual_row.start_time))
-            if not(pd.isna(actual_row.start_time)) or not(pd.isna(actual_row.end_time)):
+            if self._nan_check(actual_row.start_time, actual_row.end_time, actual_row.date):
                 start_date_str = str(actual_row.date) + ' ' + str(actual_row.start_time)
                 end_date_str = str(actual_row.date) + ' ' + str(actual_row.end_time)
 
@@ -102,6 +101,19 @@ class FileParser():
         Used by parse_dataframe column for the iloc function dataframe as it takes the indexes of the columns we wanna parse
         """
         return [list(df).index(col) for col in list(df.columns) if col in str_column_array]
+
+    @staticmethod
+    def _nan_check(*value):
+        """
+        Check if value is nan
+        """
+        for val in value:
+            try:
+                if pd.isna(val) or math.isnan(val):
+                    return False
+            except TypeError:
+                continue
+        return True
 
 def main():
     file_location = './Pictures/1-11-2021_1-17-2021_schedule.jpg'
