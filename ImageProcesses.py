@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from typing import Any, List
 
 # Mention the installed location of Tesseract-OCR in your system
-pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = os.path.join("D:\\","Repos", "Libraries","Tesseract-OCR","tesseract.exe")
 
 class ImageReaderAndParser():
     # Read image from which text needs to be extracted
@@ -113,11 +113,9 @@ class ImageReaderAndParser():
         x, y, w, h = coordinates[sums.index(max(sums))]
         return im2[y:y+h, x:x+w].copy()
 
-    def image_processor(self, img, img_slice_index) -> None:
+    def image_processor(self, img, img_slice_index, unique_divider='|||') -> None:
         """
-        Pass through an slice of an image and its index for a file to be created.
-        
-        Further work: Could be reworked to append to the same file and have a unique divider in between slices
+        Pass through an slice of an image and its index, appending to the same file.
         """
         # Convert the image to gray scale 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -141,16 +139,22 @@ class ImageReaderAndParser():
         # Creating a copy of image 
         im2 = img.copy()
         
-        # A text file is created and flushed
-        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index)))
-        file = open(txt_filename, "w+") 
-        file.write("") 
-        file.close() 
+        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}.txt".format(self.file_name))
+        if img_slice_index == 0:
+            # A text file is created and flushed
+            file = open(txt_filename, "w+")
+            file.write("") 
+            file.close()
+        else:
+            # File has been created already, so just append to it
+            pass
         
         # Looping through the identified contours 
         # Then rectangular part is cropped and passed on 
         # to pytesseract for extracting text from it 
         # Extracted text is then written into the text file 
+        # Open the file in append mode 
+        file = open(txt_filename, "a")
         for cnt in contours: 
             x, y, w, h = cv2.boundingRect(cnt) 
             
@@ -161,18 +165,17 @@ class ImageReaderAndParser():
             # Cropping the text block for giving input to OCR 
             cropped = im2[y:y + h, x:x + w]
             
-            # Open the file in append mode 
-            file = open(txt_filename, "a")
-            
             # Apply OCR on the cropped image
             text = pytesseract.image_to_string(cropped)
             
             # Appending the text into file 
             file.write(text.strip()) 
-            file.write("\n") 
-            
-            # Close the file 
-            file.close()
+            file.write("\n")
+
+        # Writing a divisor into the file
+        file.write(unique_divider)
+        file.write("\n")
+        file.close()
 
         if self.show_detected_text_pic:
             plt.imshow(img)
@@ -191,8 +194,8 @@ def main():
     # cv2.waitKey(0)
     # print(array)
     # for index, dict in enumerate(array):
-        # cv2.imshow('image', dict['img'])
-        # cv2.waitKey(0)
+    #     cv2.imshow('image', dict['img'])
+    #     cv2.waitKey(0)
         # img_rd_prsr.image_processor(dict['img'], index)
 
     

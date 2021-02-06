@@ -28,14 +28,15 @@ class FileParser():
                 return key, match
         return None, None
 
-    def parse_file(self, img_slice_index) -> dict:
-        self.data = []
-        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}_{1}.txt".format(self.file_name, str(img_slice_index)))
+    def parse_file(self) -> None:
+        lines_of_data = []
+        txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}.txt".format(self.file_name))
         with open(txt_filename, 'r') as file:
+            file_lines = file.readlines()
+            print(file_lines)
             time_count = 0
             line_data = {}
-            line = file.readline()
-            while line:
+            for line in file_lines:
                 key, match = self._parse_line(line)
                 if key == 'date':
                     # Actual date
@@ -53,10 +54,13 @@ class FileParser():
                 if key == 'day':
                     # Data for that day ended
                     line_data['day'] = match.group()
-
-                line = file.readline()
+                
+                if '|||' in line:
+                    lines_of_data.append(line_data)
+                    time_count = 0
+                    line_data = {}
         
-        return line_data
+        return lines_of_data
 
     def _output_df(self) -> None:
         """

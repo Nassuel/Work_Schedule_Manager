@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.core.base import DataError
 import win32com.client
 from datetime import datetime
 
@@ -10,7 +11,10 @@ from typing import Any, List
 class EventTerminal():
 
     def __init__(self, df: DataFrame) -> None:
-        self.df = df
+        if df.shape[0] > 0:
+            self.df = df
+        else:
+            raise DataError('Dataframe has to have some data in it')
         self.appointment_list = []
 
     def build_events(self, subject, location, recipients):
@@ -38,11 +42,12 @@ class EventTerminal():
             self.location = location
             self.duration = duration
             self.recipients = recipients
+            self.body = 'Trabajas hoy por {duration} horas\nGenerado con ❤  por Nassuel 😊'.format(duration=duration)
             self.COMObject_appt = self._create_event()
 
         def __str__(self) -> str:
-            return '''Subject: {subject}\n └ Start time: {start_time}\n  └ End time:{end_time}\n   └ Duration: {duration}\n    └ Location: {location}\n     └ Recipients: {recipients}'''.format(
-                start_time=self.start_time, end_time=self.end_time, duration=self.duration, location=self.location, subject=self.subject, recipients=self.recipients
+            return '''Subject: {subject}\n └ Start time: {start_time}\n  └ End time: {end_time}\n   └ Duration: {duration}\n    └ Location: {location}\n     └ Recipients: {recipients}\n      └ Body: {body}'''.format(
+                start_time=self.start_time, end_time=self.end_time, duration=self.duration, location=self.location, subject=self.subject, recipients=self.recipients, body=self.body
             )
 
         def send(self) -> None:
@@ -54,7 +59,8 @@ class EventTerminal():
 
         def _create_event(self) -> Any:
             """
-            docstring
+            Creates the AppointmentItem object (Outlook)
+            https://docs.microsoft.com/en-us/office/vba/api/outlook.appointmentitem
             """
             pass
             oOutlook = win32com.client.Dispatch("Outlook.Application")
@@ -66,6 +72,7 @@ class EventTerminal():
             # appointment.Duration = duration
             appointment.End = self.end_time
             appointment.Location = self.location
+            appointment.Body = self.body
             appointment.ReminderSet = True
             appointment.ReminderMinutesBeforeStart = 30
 
