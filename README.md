@@ -1,6 +1,8 @@
 # Work_Schedule_Manager
 
-The code is in its early stages 
+The code is in its early stages
+
+This needs some code samples for someone to get started
 
 All (ImageProcesses, FileProcesses, EventProcesses) files have "helper" functions which get the job done with a couple lines of code.
 
