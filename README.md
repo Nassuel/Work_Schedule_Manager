@@ -8,3 +8,4 @@ All (ImageProcesses, FileProcesses, EventProcesses) files have "helper" function
 
 ##### Sources
 [Image text detection and extraction with OpenCV and Tesseract OCR](https://www.geeksforgeeks.org/text-detection-and-extraction-using-opencv-and-ocr/ "Geeks for Geeks OpenCV Text Detection/Extraction")
+[Great help on table detection](https://stackoverflow.com/questions/50829874/how-to-find-table-like-structure-in-image/ "Stack Overflow FTW")
