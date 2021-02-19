@@ -33,7 +33,7 @@ class FileParser():
         txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}.txt".format(self.file_name))
         with open(txt_filename, 'r') as file:
             file_lines = file.readlines()
-            print(file_lines)
+            # print(file_lines)
             time_count = 0
             line_data = {}
             for line in file_lines:
