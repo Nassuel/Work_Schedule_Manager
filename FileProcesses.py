@@ -28,7 +28,7 @@ class FileParser():
                 return key, match
         return None, None
 
-    def parse_file(self) -> None:
+    def parse_file(self, unique_divider='|||') -> None:
         lines_of_data = []
         txt_filename = os.path.join(".","Recognized_Texts","recognized_{0}.txt".format(self.file_name))
         with open(txt_filename, 'r') as file:
@@ -44,10 +44,10 @@ class FileParser():
 
                 if key == 'time':
                     if time_count == 0:
-                        # End time
+                        # Start time
                         line_data['start_time'] = match.group()
                     if time_count == 1:
-                        # Start time
+                        # End time
                         line_data['end_time'] = match.group()
                     time_count += 1
                 
@@ -55,7 +55,7 @@ class FileParser():
                     # Data for that day ended
                     line_data['day'] = match.group()
                 
-                if '|||' in line:
+                if unique_divider in line:
                     lines_of_data.append(line_data)
                     time_count = 0
                     line_data = {}
