@@ -209,6 +209,27 @@ class ImageReaderAndParser():
             
         return
 
+    def output_detection(self, img, text_boxes, hor_lines, ver_lines, out_file):
+        vis = img.copy()
+
+        for box in text_boxes:
+            (x, y, w, h) = box
+            cv2.rectangle(vis, (x, y), (x + w, y + h), (0, 0, 0), 2)
+
+        prev_y = hor_lines[0][1]
+        for line in hor_lines[1:]:
+            [x1, y1, x2, y2] = line
+            cv2.imshow('image', img[prev_y:prev_y+(y1-prev_y), x1:x1+(x2-x1)])
+            cv2.waitKey(0)
+            prev_y = y1
+            cv2.line(vis, (x1 - 5, y1), (x2, y2), (0, 0, 255), 1)
+
+        for line in ver_lines:
+            [x1, y1, x2, y2] = line
+            cv2.line(vis, (x1 - 5, y1), (x2 - 5, y2), (255, 0, 0), 1)
+
+        cv2.imwrite(out_file, vis)
+
 def main():
     file_location = os.path.join("Pictures", "1-18-2021_1-24-2021_schedule.jpg")
     pre_file = os.path.join("Pictures", "pre.png")

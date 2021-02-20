@@ -44,11 +44,11 @@ class FileParser():
 
                 if key == 'time':
                     if time_count == 0:
-                        # Changed On date
-                        line_data['end_time'] = match.group()
-                    if time_count == 1:
-                        # Actual date
+                        # End time
                         line_data['start_time'] = match.group()
+                    if time_count == 1:
+                        # Start time
+                        line_data['end_time'] = match.group()
                     time_count += 1
                 
                 if key == 'day':
