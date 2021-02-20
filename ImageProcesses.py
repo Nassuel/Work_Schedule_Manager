@@ -147,16 +147,7 @@ class ImageReaderAndParser():
 
         return hor_lines, ver_lines
 
-    def detect_table(self, img=None, pre_file=None, schedule_type='') -> None:
-        cur_img = self.img if img is None else img
-        if schedule_type == 'Costco':
-            pre_processed = self.pre_process_image(cur_img, pre_file, morph_size=(15, 15))
-            text_boxes = self.find_text_boxes(pre_processed, max_text_height_limit=52)
-            cells = self.find_table_in_boxes(text_boxes, 10, 2)
-            hor_lines, ver_lines = self.build_lines(cells)
-            self.image_processor(cur_img, hor_lines, ver_lines, cells)
-
-    def image_processor(self, img, hor_lines, ver_lines, cells, unique_divider='|||') -> None:
+    def image_processor(self, img, hor_lines, ver_lines, cells, unique_divider='|||',limit_col=None) -> None:
         """
         Pass through an slice of an image and its index, appending to the same file.
         """
@@ -167,14 +158,20 @@ class ImageReaderAndParser():
 
         # Create file and flush
         file = open(txt_filename, "w+")
-        file.write("") 
+        file.write("")
         file.close()
+
+        # Limiting how much of the table will be parsed
+        limiting_line = None
+        if limit_col is not None:
+            limiting_line = ver_lines[limit_col]
+            for r_index, row in enumerate(cells):
+                filtered_row = [box for box in row if box[0] < limiting_line[0]]
+                cells[r_index] = filtered_row
 
         prev_y = hor_lines[0][1]
         for img_slice_index, line in enumerate(hor_lines[1:]):
             [x1, y1, x2, y2] = line
-            # cv2.imshow('image', img[prev_y:prev_y+(y1-prev_y), x1:x1+(x2-x1)])
-            # cv2.waitKey(0)
 
             slice = im2[prev_y:prev_y+(y1-prev_y), x1:x1+(x2-x1)]
             prev_y = y1
@@ -191,6 +188,12 @@ class ImageReaderAndParser():
                 
                 # Apply OCR on the cropped image
                 text = pytesseract.image_to_string(cropped).strip()
+                # Sometimes pytesseact doesn't read what's on the image. In these instances, I ask
+                # the user for help
+                if text == '':
+                    cv2.imshow('image', cropped)
+                    cv2.waitKey(0)
+                    text = input('Please input what you saw on the image: ')
                 file.write(text)
                 file.write("\n")
             
@@ -198,30 +201,6 @@ class ImageReaderAndParser():
             file.write(unique_divider)
             file.write("\n")
             file.close()
-        
-        # Open the file in append mode 
-        # file = open(txt_filename, "a")
-        # for cnt in contours: 
-        #     x, y, w, h = cv2.boundingRect(cnt) 
-            
-        #     # Drawing a rectangle on copied image
-        #     rect = cv2.rectangle(im2, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        #     if self.show_detected_text_pic: cv2.rectangle(img,(x,y),(x+w,y+h),(0,0,255),1)
-            
-        #     # Cropping the text block for giving input to OCR 
-        #     cropped = im2[y:y + h, x:x + w]
-            
-        #     # Apply OCR on the cropped image
-        #     text = pytesseract.image_to_string(cropped)
-            
-        #     # Appending the text into file 
-        #     file.write(text.strip()) 
-        #     file.write("\n")
-
-        # Writing a divisor into the file
-        # file.write(unique_divider)
-        # file.write("\n")
-        # file.close()
 
         if self.show_detected_text_pic:
             plt.imshow(img)
