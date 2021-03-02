@@ -31,7 +31,7 @@ class ImageReaderAndParser():
         pre = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         # Otsu threshold
-        pre = cv2.threshold(pre, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        pre = cv2.threshold(pre, 250, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
         # dilate the text to make it solid spot
         cpy = pre.copy()
@@ -63,6 +63,7 @@ class ImageReaderAndParser():
             box = cv2.boundingRect(contour)
             (x, y, w, h) = box
 
+            # print(int(height - height * .6), int(height * .9))
             if (min_text_height_limit < h < max_text_height_limit and 
                     int(height - height * .55) <= y <= int(height * .9)):
                 boxes.append(box)

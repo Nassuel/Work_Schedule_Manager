@@ -17,13 +17,13 @@ class EventTerminal():
             raise DataError('Dataframe has to have some data in it')
         self.appointment_list = []
 
-    def build_events(self, subject, location, recipients):
+    def build_events(self, subject, location, recipients, attachments):
         for row in self.df.iterrows():
             actual_row = row[1]
 
             start = datetime.strftime(actual_row.start_time_converted, '%Y-%m-%d %H:%M:%S')
             end = datetime.strftime(actual_row.end_time_converted, '%Y-%m-%d %H:%M:%S')
-            event_instance = self.Event(start_time=start, subject=subject, end_time=end, location=location, duration=actual_row.duration, recipients=recipients)
+            event_instance = self.Event(start_time=start, subject=subject, end_time=end, location=location, duration=actual_row.duration, recipients=recipients, attachments=attachments)
             self.appointment_list.append(event_instance)
 
     def send_events(self):
@@ -35,13 +35,14 @@ class EventTerminal():
         COMObject Appointment object wrapped used for easier access to event data since the Outlook API is somewhat funky
         """
 
-        def __init__(self, start_time: str, subject: str, end_time: str, location: str, duration: float, recipients: List[str]) -> None:
+        def __init__(self, start_time: str, subject: str, end_time: str, location: str, duration: float, recipients: List[str], attachments: List[str]) -> None:
             self.start_time = start_time
             self.end_time = end_time
             self.subject = subject
             self.location = location
             self.duration = duration
             self.recipients = recipients
+            self.attachments = attachments
             self.body = 'Trabajas hoy por {duration} horas\nGenerado con ❤  por Nassuel 😊'.format(duration=duration)
             self.COMObject_appt = self._create_event()
 
@@ -76,11 +77,16 @@ class EventTerminal():
             appointment.ReminderSet = True
             appointment.ReminderMinutesBeforeStart = 30
 
-            # If there are recipients, then convert to meeting
+            # If there are recipients, then convert to meeting and add them
             if len(self.recipients) > 0:
                 appointment.MeetingStatus = 1
                 for rcpnt in self.recipients:
                     appointment.Recipients.Add(rcpnt)
+
+            # If there are attachments, add them
+            if len(self.attachments) > 0:
+                for attach in self.attachments:
+                    appointment.Attachments.Add(attach)
 
             return appointment
 
@@ -90,6 +96,7 @@ def main():
     v_crtn.build_events('Día de Trabajo', 'Costco (1175 N 205th St, Shoreline, WA  98133, United States)', ['valeracuevan@spu.edu'])
     for event in v_crtn.appointment_list:
         print(event)
+        print()
     # v_crtn.send_events()
 
 
