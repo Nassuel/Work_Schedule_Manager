@@ -132,3 +132,4 @@ dmypy.json
 *.jpg
 *.ics
 test.py
+variables_in.py
