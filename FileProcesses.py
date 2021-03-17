@@ -35,6 +35,7 @@ class FileParser():
             file_lines = file.readlines()
             # print(file_lines)
             time_count = 0
+            prev_day = ''
             line_data = {}
             for line in file_lines:
                 key, match = self._parse_line(line)
@@ -54,8 +55,12 @@ class FileParser():
                 if key == 'day':
                     # Data for that day ended
                     line_data['day'] = match.group()
+                    prev_day = match.group()
                 
                 if unique_divider in line:
+                    # Taking into account where there are 2 shifts in one day with different times
+                    if 'day' not in line_data.keys():
+                        line_data['day'] = prev_day
                     lines_of_data.append(line_data)
                     time_count = 0
                     line_data = {}

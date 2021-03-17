@@ -1,12 +1,13 @@
+import re
+import random
+import requests
 import pandas as pd
-from pandas.core.base import DataError
 import win32com.client
-from datetime import datetime
-
-from pandas.core.frame import DataFrame
-
 from typing import Any, List
-
+from bs4 import BeautifulSoup
+from datetime import datetime
+from pandas.core.base import DataError
+from pandas.core.frame import DataFrame
 
 class EventTerminal():
 
@@ -17,13 +18,13 @@ class EventTerminal():
             raise DataError('Dataframe has to have some data in it')
         self.appointment_list = []
 
-    def build_events(self, subject, location, recipients, attachments):
+    def build_events(self, subject, location, recipients, attachments, body):
         for row in self.df.iterrows():
             actual_row = row[1]
 
             start = datetime.strftime(actual_row.start_time_converted, '%Y-%m-%d %H:%M:%S')
             end = datetime.strftime(actual_row.end_time_converted, '%Y-%m-%d %H:%M:%S')
-            event_instance = self.Event(start_time=start, subject=subject, end_time=end, location=location, duration=actual_row.duration, recipients=recipients, attachments=attachments)
+            event_instance = self.Event(start_time=start, subject=subject, end_time=end, location=location, duration=actual_row.duration, recipients=recipients, attachments=attachments, body=body)
             self.appointment_list.append(event_instance)
 
     def send_events(self):
@@ -32,10 +33,11 @@ class EventTerminal():
 
     class Event(object):
         """
-        COMObject Appointment object wrapped used for easier access to event data since the Outlook API is somewhat funky
+        COMObject Appointment object wrapper used for easier access to event data since the Outlook API is somewhat funky
         """
-
-        def __init__(self, start_time: str, subject: str, end_time: str, location: str, duration: float, recipients: List[str], attachments: List[str]) -> None:
+        _fields = [('Subject','subject'),('Start time', 'start_time'), ('End time', 'end_time'), 
+                   ('Duration', 'duration'), ('Location', 'location'), ('Recipients', 'recipients'), ('Body','body')]
+        def __init__(self, start_time: str, subject: str, end_time: str, location: str, duration: float, recipients: List[str], attachments: List[str], body: str) -> None:
             self.start_time = start_time
             self.end_time = end_time
             self.subject = subject
@@ -43,11 +45,17 @@ class EventTerminal():
             self.duration = duration
             self.recipients = recipients
             self.attachments = attachments
-            self.body = 'Trabajas hoy por {duration} horas\nGenerado con ❤  por Nassuel 😊'.format(duration=duration)
+            self.body = body.format(duration=duration,quote=self.quote_service())
             self.COMObject_appt = self._create_event()
 
         def __str__(self) -> str:
-            return '''Subject: {subject}\n └ Start time: {start_time}\n  └ End time: {end_time}\n   └ Duration: {duration}\n    └ Location: {location}\n     └ Recipients: {recipients}\n      └ Body: {body}'''.format(
+            output = ''
+            for i, field in enumerate(self._fields):
+                if i != 0:
+                    output += ' ' * i + '└ ' + field[0] + ': {' + field[1] + '}\n'
+                else:
+                    output += field[0] + ': {' + field[1] + '}\n'
+            return output.format(
                 start_time=self.start_time, end_time=self.end_time, duration=self.duration, location=self.location, subject=self.subject, recipients=self.recipients, body=self.body
             )
 
@@ -70,7 +78,6 @@ class EventTerminal():
 
             appointment.Start = self.start_time
             appointment.Subject = self.subject
-            # appointment.Duration = duration
             appointment.End = self.end_time
             appointment.Location = self.location
             appointment.Body = self.body
@@ -90,15 +97,43 @@ class EventTerminal():
 
             return appointment
 
-def main():
-    df = pd.read_csv('./Schedule_Dfs/1-11-2021_1-17-2021_schedule.csv')
-    v_crtn = EventTerminal(df)
-    v_crtn.build_events('Día de Trabajo', 'Costco (1175 N 205th St, Shoreline, WA  98133, United States)', ['valeracuevan@spu.edu'])
-    for event in v_crtn.appointment_list:
-        print(event)
-        print()
-    # v_crtn.send_events()
+        def quote_service(self):
+            random_page = random.randint(0, 100)
+            URL = 'https://www.goodreads.com/quotes?page={0}'.format(random_page)
+
+            req = requests.get(URL)
+            soupy = BeautifulSoup(req.content, 'html.parser')
+
+            results = soupy.find_all('div', class_='quote', recursive=True)
+            data = []
+
+            for elem in results:
+                data_row = {}
+                quoteText = elem.find('div', class_='quoteText')
+                authorOrTitle = quoteText.find('span', class_='authorOrTitle')
+                if None in (quoteText, authorOrTitle):
+                    # print('Check ', quoteText)
+                    # print('Wow ', authorOrTitle)
+                    continue
+                data_row['quote'] = re.compile(r"\“(.*?)\”").search(quoteText.text.strip()).group()
+                data_row['author'] = authorOrTitle.text.strip(' \n\r,')
+                data.append(data_row)
+
+            df = pd.DataFrame(data=data)
+            random_quote = df.iloc[random.randint(0,df.shape[0])]
+            
+            return random_quote[0] + '\n' + random_quote[1]
+
+# def main():
+#     df = pd.read_csv('./Schedule_Dfs/3-8-2021_3-14-2021_schedule.csv')
+#     df = df.dropna(axis=0).reset_index()
+#     v_crtn = EventTerminal(df)
+#     v_crtn.build_events('Día de Trabajo', 'Costco (1175 N 205th St, Shoreline, WA  98133, United States)', ['valeracuevan@spu.edu'], attachments=[])
+#     for event in v_crtn.appointment_list:
+#         print(event)
+#         print()
+#     # v_crtn.send_events()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
