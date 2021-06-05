@@ -1,6 +1,7 @@
 import re
 import os
 import math
+import logging
 import numpy as np
 import pandas as pd
 from typing import Any, List
@@ -8,6 +9,9 @@ from pandas.core.frame import DataFrame
 from datetime import datetime, timedelta
 
 class FileParser():
+    """
+    Parses the file outputted by ImageParser
+    """
 
     def __init__(self, img_filename_path: str, verbose=False) -> None:
         self.verbose = verbose
@@ -84,8 +88,7 @@ class FileParser():
 
         new_columns_indexes = self._index_from_columndf(self.df, new_columns)
 
-        for row in self.df.iterrows():
-            actual_row = row[1]
+        for index, actual_row in self.df.iterrows():
             if self._nan_check(actual_row.start_time, actual_row.end_time, actual_row.date):
                 start_date_str = str(actual_row.date) + ' ' + str(actual_row.start_time)
                 end_date_str = str(actual_row.date) + ' ' + str(actual_row.end_time)
@@ -97,9 +100,9 @@ class FileParser():
                 if start_datetime > end_datetime:
                     end_datetime += timedelta(days=1)
 
-                self.df.iloc[row[0], new_columns_indexes] = [start_datetime, end_datetime]
+                self.df.iloc[index, new_columns_indexes] = [start_datetime, end_datetime]
         
-        # Since the substraction turns into timedelta, hours is not a timedelta properties, so have to get seconds and convert to hours
+        # Since the substraction turns into timedelta, hours is not a timedelta property, so have to get seconds and convert to hours
         self.df['duration'] = (self.df['end_time_converted'] - self.df['start_time_converted']).dt.seconds / 3600
 
         return
@@ -123,16 +126,3 @@ class FileParser():
             except TypeError:
                 continue
         return True
-
-def main():
-    file_location = './Pictures/1-11-2021_1-17-2021_schedule.jpg'
-    fl_prsr = FileParser(file_location)
-    lines_of_data = []
-    for i in range(1,8):
-        lines_of_data.append(fl_prsr.parse_file(i))
-    fl_prsr.parse_dataframe(lines_of_data)
-    print(fl_prsr.df_file_location)
-    fl_prsr._output_df()
-        
-if __name__ == '__main__':
-    main()
