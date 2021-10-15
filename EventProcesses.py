@@ -10,6 +10,9 @@ from bs4 import BeautifulSoup
 from pandas.core.base import DataError
 from pandas.core.frame import DataFrame
 
+from main_logger import logger
+logger = logging.getLogger(__file__.split('\\')[-1].split('.')[0])
+
 class EventTerminal():
 
     def __init__(self, df: DataFrame) -> None:
@@ -27,6 +30,7 @@ class EventTerminal():
             end = datetime.datetime.strftime(actual_row.end_time_converted, '%Y-%m-%d %H:%M:%S')
             body_fields = {'duration': actual_row.duration,'quote': self.__get_random_quote()}
             event_instance = self.Event(
+                start_time_datetime=actual_row.start_time_converted,
                 start_time=start, 
                 subject=subject, 
                 end_time=end, 
@@ -80,8 +84,10 @@ class EventTerminal():
         """
         _fields = [('Subject','subject'),('Start time', 'start_time'), ('End time', 'end_time'), 
                    ('Duration', 'duration'), ('Location', 'location'), ('Recipients', 'recipients'), ('Body','body')]
-        def __init__(self, start_time: str, subject: str, end_time: str, location: str, recipients: List[str], attachments: List[str], body: str, body_fields=None) -> None:
+        def __init__(self, start_time_datetime: datetime.datetime, start_time: str, subject: str, end_time: str, location: str, recipients: List[str], attachments: List[str], body: str, body_fields=None) -> None:
+            self._start_time_datetime = start_time_datetime
             self._start_time = start_time
+            self._duration = body_fields['duration']
             self._end_time = end_time
             self._subject = subject
             self._location = location
@@ -94,13 +100,17 @@ class EventTerminal():
         def __str__(self) -> str:
             output = ''
             for i, field in enumerate(self._fields):
+                show, key = field
                 if i != 0:
-                    output += ' ' * i + '└ ' + field[0] + ': {' + field[1] + '}\n'
+                    output += ' ' * i + '└ ' + show + ': {' + key + '}\n'
                 else:
-                    output += field[0] + ': {' + field[1] + '}\n'
+                    output += show + ': {' + key + '}\n'
             return output.format(
-                start_time=self.start_time, end_time=self.end_time, duration=self.duration, location=self.location, subject=self.subject, recipients=self.recipients, body=self.body
+                start_time=self._start_time, end_time=self._end_time, duration=self._duration, location=self._location, subject=self._subject, recipients=self._recipients, body=self._body
             )
+
+        def save_in_location(self, location, name) -> None:
+            self._COMObject_appt.SaveAs(location+'/'+str(name)+'.msg', 9)
 
         def save_and_send(self) -> None:
             """
@@ -115,6 +125,7 @@ class EventTerminal():
             https://docs.microsoft.com/en-us/office/vba/api/outlook.appointmentitem
             """
             # Check if event exists
+            # self._cancel_if_exists(self._start_time_datetime)
 
             appointment = self._oOutlook.CreateItem(1)  # 1=outlook appointment item
 
@@ -139,7 +150,7 @@ class EventTerminal():
 
             return appointment
 
-        def _cancel_if_exists(self, event):
+        def _cancel_if_exists(self, start_time):
             """
             Work in progress since OutlookAPI doesn't let me filter down to the specific calendar meeting/appointment.
             Only allows me to filter to the day 😭
@@ -149,7 +160,9 @@ class EventTerminal():
             appointments = namespace.GetDefaultFolder(9).Items
             appointments.Sort("[Start]")
 
-            begin = datetime.date(2021,3,25)
+            # logger.debug(': Input date when running _cancel_if_exists | Literal: %s | Type: ', start_time, type(start_time))
+
+            begin = datetime.date(start_time.year,start_time.month,start_time.day)
             end = begin + datetime.timedelta(days = 1)
             restriction = "[Start] > '" + begin.strftime("%m/%d/%Y %I:%M%p") + "' AND [End] < '" + end.strftime("%m/%d/%Y %I:%M%p") + "' AND [Subject] = 'Día de Trabajo'"
             restrictedItems = appointments.Restrict(restriction)

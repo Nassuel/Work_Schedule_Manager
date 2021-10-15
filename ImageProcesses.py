@@ -5,9 +5,7 @@ import pytesseract
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Any, List
 from main_logger import logger
-
 logger = logging.getLogger(__file__.split('\\')[-1].split('.')[0])
 
 # Mention the installed location of Tesseract-OCR in your system
