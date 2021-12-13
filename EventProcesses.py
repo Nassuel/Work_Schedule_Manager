@@ -1,8 +1,10 @@
 import re
+import os
 import random
 import logging
 import datetime
 import requests
+import numpy as np
 import pandas as pd
 import win32com.client
 from typing import Any, List
@@ -10,7 +12,9 @@ from bs4 import BeautifulSoup
 from pandas.core.base import DataError
 from pandas.core.frame import DataFrame
 
+import variables_in as var
 from main_logger import logger
+
 logger = logging.getLogger(__file__.split('\\')[-1].split('.')[0])
 
 class EventTerminal():
@@ -24,11 +28,21 @@ class EventTerminal():
         self.quote_service_data = self.quote_service()
 
     def build_events(self, subject, location, recipients, attachments, body):
+        og_subject = subject # Needed to do this since changing subject of if statement, changes it permanently
         for index, actual_row in self.df.iterrows():
 
-            start = datetime.datetime.strftime(actual_row.start_time_converted, '%Y-%m-%d %H:%M:%S')
+            logger.debug(': actual_row.start_time_converted | Literal: %s | Type: %s', actual_row.start_time_converted, type(actual_row.start_time_converted))
+            logger.debug(': df: %s', actual_row)
+            start = datetime.datetime.strftime(actual_row.start_time_converted, '%Y-%m-%d %H:%M:%S') 
             end = datetime.datetime.strftime(actual_row.end_time_converted, '%Y-%m-%d %H:%M:%S')
             body_fields = {'duration': actual_row.duration,'quote': self.__get_random_quote()}
+            
+            # Request to know the job position (if there is) instead of boiler template name/else just boiler template
+            if 'Alt Dept/Job' in actual_row.keys() and actual_row['Alt Dept/Job'] is not np.NaN:
+                subject = actual_row['Alt Dept/Job']
+            else:
+                subject = og_subject
+                
             event_instance = self.Event(
                 start_time_datetime=actual_row.start_time_converted,
                 start_time=start, 
@@ -43,8 +57,22 @@ class EventTerminal():
             self.appointment_list.append(event_instance)
 
     def send_events(self):
+        """
+        Sends events from the list of appointments
+        Handles whenever an event is not deliverable, saving such to a folder named <var.file_name> defined in file named <variables_in>
+
+        Output: None | Prints which appointments have been sent
+        """
+        error_count = 0
         for index, event in enumerate(self.appointment_list):
-            event.save_and_send()
+            try:
+                event.save_and_send()
+            except:
+                # TODO: Check why is it saving without erroring out
+                if error_count == 0:
+                    os.mkdir(var.file_name)
+                event.save_in_location(os.path.join(var.rel_path,var.file_name),index)
+                error_count += 1
             print('Saved and Sent', index)
 
     def __get_random_quote(self):

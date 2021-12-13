@@ -39,13 +39,9 @@ if __name__ == "__main__":
     logger.info('Starting event terminal')
     v_crtn = EventTerminal(df)
     v_crtn.build_events(**var.event_info)
-    for event in v_crtn.appointment_list:
-        print(event)
+    # for event in v_crtn.appointment_list:
+    #     print(event)
 
-    # try:
-    #     v_crtn.send_events()
-    # except:
-    #     os.mkdir(var.file_name)
-    #     for index, appt in enumerate(v_crtn.appointment_list):
-    #         appt.save_in_location(os.path.join(var.rel_path,var.file_name),index)
+    v_crtn.send_events()
+
     logger.info('Finishing event terminal')

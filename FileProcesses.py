@@ -87,39 +87,25 @@ class FileParser():
         Else
         """
         if self.from_file_format not in ['html'] and len(lines_of_data) > 0:
-            self.df = pd.DataFrame(lines_of_data)
-            new_columns = ['start_time_converted','end_time_converted']
-            self.df[new_columns] = [np.NaN, np.NaN]
-
-            new_columns_indexes = self._index_from_columndf(self.df, new_columns)
-
-            for index, actual_row in self.df.iterrows():
-                if self._nan_check(actual_row.start_time, actual_row.end_time, actual_row.date):
-                    start_date_str = str(actual_row.date) + ' ' + str(actual_row.start_time)
-                    end_date_str = str(actual_row.date) + ' ' + str(actual_row.end_time)
-
-                    start_datetime = datetime.strptime(start_date_str, "%m/%d/%Y %I:%M %p")
-                    end_datetime = datetime.strptime(end_date_str, "%m/%d/%Y %I:%M %p")
-
-                    # There are some stocker days where the departure is in the am
-                    if start_datetime > end_datetime:
-                        end_datetime += timedelta(days=1)
-
-                    self.df.iloc[index, new_columns_indexes] = [start_datetime, end_datetime]
+            df = pd.DataFrame(lines_of_data)
             
-            # Since the substraction turns into timedelta, hours is not a timedelta property, so have to get seconds and convert to hours
-            self.df['duration'] = (self.df['end_time_converted'] - self.df['start_time_converted']).dt.seconds / 3600
-        elif self.from_file_format == 'html': # TODO: Couple lines of data and this since they're doing 90% of about the same thing
+            self.df = self._parse_dataframe_continuation(self, df)
+            
+        elif self.from_file_format == 'html':
             f = codecs.open(self.from_file, 'r')
 
-            schedule_df = pd.read_html(f.read(), header=0, skiprows=[0])[0]
-            schedule_df = schedule_df.drop(schedule_df.loc[schedule_df['Day'] == 'Total Hours'].index)
-            schedule_df['start_time_string'] = schedule_df['Date'] + ' ' + schedule_df['Start Time']
-            schedule_df['end_time_string'] = schedule_df['Date'] + ' ' + schedule_df['End Time']
-            schedule_df[['start_time_converted','end_time_converted']] = schedule_df[['start_time_string','end_time_string']].apply(pd.to_datetime, format="%m/%d/%Y %I:%M %p")
-            schedule_df = schedule_df.dropna(subset=['start_time_string','end_time_string'])
-            schedule_df['duration'] = (schedule_df['end_time_converted'] - schedule_df['start_time_converted']).dt.seconds / 3600
-            self.df = schedule_df
+            schedule_df = pd.read_html(f.read().replace('Total Hours',''), header=0, skiprows=[0])[0]
+            schedule_df.rename(columns={"Start Time": "start_time", "End Time": "end_time", "Date": "date"}, inplace=True)
+
+            self.df = self._parse_dataframe_continuation(self, schedule_df)
+
+            # Saving as it's a pretty neat way to parse datetime from string to datetime object
+            # schedule_df['start_time_string'] = schedule_df['Date'] + ' ' + schedule_df['Start Time']
+            # schedule_df['end_time_string'] = schedule_df['Date'] + ' ' + schedule_df['End Time']
+            # schedule_df[['start_time_converted','end_time_converted']] = schedule_df[['start_time_string','end_time_string']].apply(pd.to_datetime, format="%m/%d/%Y %I:%M %p")
+            # schedule_df = schedule_df.dropna(subset=['start_time_string','end_time_string'])
+            # schedule_df['duration'] = (schedule_df['end_time_converted'] - schedule_df['start_time_converted']).dt.seconds / 3600
+            # self.df = schedule_df
         else:
             self.df = pd.read_csv(self.df_file_location, parse_dates=[4,5])
 
@@ -144,3 +130,31 @@ class FileParser():
             except TypeError:
                 continue
         return True
+
+    @staticmethod
+    def _parse_dataframe_continuation(self, df):
+        new_columns = ['start_time_converted','end_time_converted']
+        df[new_columns] = [np.NaN, np.NaN]
+
+        new_columns_indexes = self._index_from_columndf(df, new_columns)
+
+        for index, actual_row in df.iterrows():
+            if self._nan_check(actual_row.start_time, actual_row.end_time, actual_row.date):
+                start_date_str = str(actual_row.date) + ' ' + str(actual_row.start_time)
+                end_date_str = str(actual_row.date) + ' ' + str(actual_row.end_time)
+
+                start_datetime = datetime.strptime(start_date_str, "%m/%d/%Y %I:%M %p")
+                end_datetime = datetime.strptime(end_date_str, "%m/%d/%Y %I:%M %p")
+
+                # There are some stocker days where the departure is in the am
+                if start_datetime > end_datetime:
+                    end_datetime += timedelta(days=1)
+
+                df.iloc[index, new_columns_indexes] = [start_datetime, end_datetime]
+
+        # Since the substraction turns into timedelta, hours is not a timedelta property, so have to get seconds and convert to hours
+        df['duration'] = (df['end_time_converted'] - df['start_time_converted']).dt.seconds / 3600
+
+        df = df.dropna(subset=['start_time_converted','start_time_converted'])
+        
+        return df
