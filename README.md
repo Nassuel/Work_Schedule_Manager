@@ -14,4 +14,4 @@ which can be easily parsed using pandas rather than using image processing. Yet,
 
 Due to py32win dependency, EventProcesses.py is fully operational on Windows with Outlook installed.
 
-If you have any questions, you can email [me](mailto:valeranassuel@protonmail.com?subject="Work_Schedule_Manager")
+If you have any questions, you can email [me](mailto:valeranassuel@protonmail.com?subject=Work_Schedule_Manager)
