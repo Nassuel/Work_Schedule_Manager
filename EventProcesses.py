@@ -1,5 +1,6 @@
 import re
 import os
+import math
 import random
 import logging
 import datetime
@@ -38,7 +39,7 @@ class EventTerminal():
             body_fields = {'duration': actual_row.duration,'quote': self.__get_random_quote()}
             
             # Request to know the job position (if there is) instead of boiler template name/else just boiler template
-            if 'Alt Dept/Job' in actual_row.keys() and actual_row['Alt Dept/Job'] is not np.NaN:
+            if 'Alt Dept/Job' in actual_row.keys() and self._nan_check(actual_row['Alt Dept/Job']):
                 subject = actual_row['Alt Dept/Job']
             else:
                 subject = og_subject
@@ -68,7 +69,7 @@ class EventTerminal():
             try:
                 event.save_and_send()
             except:
-                # TODO: Check why is it saving without erroring out
+                # TODO: Check why is it saving without thrown exception
                 if error_count == 0:
                     os.mkdir(var.file_name)
                 event.save_in_location(os.path.join(var.rel_path,var.file_name),index)
@@ -105,6 +106,19 @@ class EventTerminal():
                 data.append(data_row)
             
             return data
+
+    @staticmethod
+    def _nan_check(*value):
+        """
+        Check if value is nan
+        """
+        for val in value:
+            try:
+                if pd.isna(val) or math.isnan(val):
+                    return False
+            except TypeError:
+                continue
+        return True
 
     class Event(object):
         """
