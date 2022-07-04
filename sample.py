@@ -1,4 +1,5 @@
-import os
+import os, sys
+sys.path.append('./src')
 
 from FileProcesses import FileParser
 from EventProcesses import EventTerminal

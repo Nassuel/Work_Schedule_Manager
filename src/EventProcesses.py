@@ -68,7 +68,8 @@ class EventTerminal():
         for index, event in enumerate(self.appointment_list):
             try:
                 event.save_and_send()
-            except:
+            except Exception as e:
+                print('Error', e)
                 # TODO: Check why is it saving without thrown exception
                 if error_count == 0:
                     os.mkdir(var.file_name)
