@@ -1,17 +1,20 @@
+import re
 import os
 import math
+import random
 import logging
 import datetime
+import requests
 import numpy as np
 import pandas as pd
 import win32com.client
 from typing import Any, List
+from bs4 import BeautifulSoup
 from pandas.core.base import DataError
 from pandas.core.frame import DataFrame
 
 import variables_in as var
 from main_logger import logger
-from .Services.quotes import QuoteService
 
 logger = logging.getLogger(__file__.split('\\')[-1].split('.')[0])
 
@@ -23,9 +26,7 @@ class EventTerminal():
         else:
             raise DataError('Dataframe has to have some data in it')
         self.appointment_list = []
-        logger.debug(': about: Quote Service started')
-        quote_service = QuoteService()
-        self.quote_service_quote = quote_service.__get_random_quote()
+        self.quote_service_data = self.quote_service()
 
     def build_events(self, subject, location, recipients, attachments, body):
         og_subject = subject # Needed to do this since changing subject of if statement, changes it permanently
@@ -35,10 +36,7 @@ class EventTerminal():
             logger.debug(': df: %s', actual_row)
             start = datetime.datetime.strftime(actual_row.start_time_converted, '%Y-%m-%d %H:%M:%S') 
             end = datetime.datetime.strftime(actual_row.end_time_converted, '%Y-%m-%d %H:%M:%S')
-            body_fields = {
-                'duration': actual_row.duration,
-                'quote': self.quote_service_quote
-            }
+            body_fields = {'duration': actual_row.duration,'quote': self.__get_random_quote()}
             
             # Request to know the job position (if there is) instead of boiler template name/else just boiler template
             if 'Alt Dept/Job' in actual_row.keys() and self._nan_check(actual_row['Alt Dept/Job']):
@@ -78,6 +76,37 @@ class EventTerminal():
                 event.save_in_location(os.path.join(var.rel_path,var.file_name),index)
                 error_count += 1
             print('Saved and Sent', index)
+
+    def __get_random_quote(self):
+        try:
+            random_quote_data = self.quote_service_data[random.randint(0,len(self.quote_service_data))]
+        except IndexError:
+            random_quote_data = self.quote_service_data[0]
+        return random_quote_data['quote'] + '\n' + random_quote_data['author']
+
+    def quote_service(self):
+            random_page = random.randint(0, 100)
+            URL = 'https://www.goodreads.com/quotes?page={0}'.format(random_page)
+
+            req = requests.get(URL)
+            soupy = BeautifulSoup(req.content, 'html.parser')
+
+            results = soupy.find_all('div', class_='quote', recursive=True)
+            data = []
+
+            for elem in results:
+                data_row = {}
+                quoteText = elem.find('div', class_='quoteText')
+                authorOrTitle = quoteText.find('span', class_='authorOrTitle')
+                if None in (quoteText, authorOrTitle):
+                    # print('Check ', quoteText)
+                    # print('Wow ', authorOrTitle)
+                    continue
+                data_row['quote'] = re.compile(r"\“(.*?)\”").search(quoteText.text.strip()).group()
+                data_row['author'] = authorOrTitle.text.strip(' \n\r,')
+                data.append(data_row)
+            
+            return data
 
     @staticmethod
     def _nan_check(*value):
@@ -164,25 +193,25 @@ class EventTerminal():
 
             return appointment
 
-        # def _cancel_if_exists(self, start_time):
-        #     """
-        #     Work in progress since OutlookAPI doesn't let me filter down to the specific calendar meeting/appointment.
-        #     Only allows me to filter to the day 😭
-        #     """
-        #     namespace = self._oOutlook.GetNamespace("MAPI")
+        def _cancel_if_exists(self, start_time):
+            """
+            Work in progress since OutlookAPI doesn't let me filter down to the specific calendar meeting/appointment.
+            Only allows me to filter to the day 😭
+            """
+            namespace = self._oOutlook.GetNamespace("MAPI")
 
-        #     appointments = namespace.GetDefaultFolder(9).Items
-        #     appointments.Sort("[Start]")
+            appointments = namespace.GetDefaultFolder(9).Items
+            appointments.Sort("[Start]")
 
-        #     # logger.debug(': Input date when running _cancel_if_exists | Literal: %s | Type: ', start_time, type(start_time))
+            # logger.debug(': Input date when running _cancel_if_exists | Literal: %s | Type: ', start_time, type(start_time))
 
-        #     begin = datetime.date(start_time.year,start_time.month,start_time.day)
-        #     end = begin + datetime.timedelta(days = 1)
-        #     restriction = "[Start] > '" + begin.strftime("%m/%d/%Y %I:%M%p") + "' AND [End] < '" + end.strftime("%m/%d/%Y %I:%M%p") + "' AND [Subject] = 'Día de Trabajo'"
-        #     restrictedItems = appointments.Restrict(restriction)
+            begin = datetime.date(start_time.year,start_time.month,start_time.day)
+            end = begin + datetime.timedelta(days = 1)
+            restriction = "[Start] > '" + begin.strftime("%m/%d/%Y %I:%M%p") + "' AND [End] < '" + end.strftime("%m/%d/%Y %I:%M%p") + "' AND [Subject] = 'Día de Trabajo'"
+            restrictedItems = appointments.Restrict(restriction)
 
-        #     if len(restrictedItems) > 0:
-        #         for appointmentItem in restrictedItems:
-        #             appointmentItem.MeetingStatus = 5
-        #             appointmentItem.Save()
-        #             appointmentItem.Send()
+            if len(restrictedItems) > 0:
+                for appointmentItem in restrictedItems:
+                    appointmentItem.MeetingStatus = 5
+                    appointmentItem.Save()
+                    appointmentItem.Send()
