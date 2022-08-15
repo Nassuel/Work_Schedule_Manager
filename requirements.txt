@@ -1,6 +1,0 @@
-opencv-python==4.5.1.48
-pytesseract==0.3.7
-pywin32==300
-matplotlib==3.3.4
-pandas==1.2.1
-# https://tesseract-ocr.github.io/tessdoc/Home.html

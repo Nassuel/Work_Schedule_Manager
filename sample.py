@@ -1,15 +1,12 @@
 import os, sys
 sys.path.append('./src')
 
-from FileProcesses import FileParser
-from EventProcesses import EventTerminal
-from ImageProcesses import ImageParser
+from Work_schedule_manager import FileProcesses, EventProcesses, ImageProcesses
 
 import variables_in as var
-from main_logger import logger
 
 if __name__ == "__main__":
-    logger.info(var.file_location)
+    # logger.info(var.file_location)
 
     # logger.info('Starting image processing')
     # img_rd_prsr = ImageParser(var.file_location,show_detect_jpg=False)
@@ -21,12 +18,12 @@ if __name__ == "__main__":
     # img_rd_prsr.image_processor(img_rd_prsr.img, hor_lines, ver_lines, cells, limit_col=4)
     # logger.info('Finishing image processing')
     
-    logger.info('Starting file parser')
-    fl_prsr = FileParser(var.file_location, from_file=var.from_file)
+    # logger.info('Starting file parser')
+    fl_prsr = FileProcesses.FileParser(var.file_location, from_file=var.from_file)
     # lines_of_data = fl_prsr.parse_file()
     fl_prsr.parse_dataframe()
     # fl_prsr._output_df()
-    logger.info('Finishing file parser')
+    # logger.info('Finishing file parser')
 
     df = fl_prsr.df #.dropna(axis=0)
     print(df)
@@ -37,12 +34,12 @@ if __name__ == "__main__":
     else:
         quit()
 
-    logger.info('Starting event terminal')
-    v_crtn = EventTerminal(df)
+    # logger.info('Starting event terminal')
+    v_crtn = EventProcesses.EventTerminal(df)
     v_crtn.build_events(**var.event_info)
     # for event in v_crtn.appointment_list:
     #     print(event)
 
     v_crtn.send_events()
 
-    logger.info('Finishing event terminal')
+    # logger.info('Finishing event terminal')
