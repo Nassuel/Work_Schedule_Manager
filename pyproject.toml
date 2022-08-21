@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0","opencv-python==4.5.1.48", "pytesseract==0.3.7", "pywin32==300", "matplotlib==3.3.4", "pandas==1.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "work_schedule_manager"
+version = "0.0.1"
+authors = [
+  { name="Nassuel", email="valeranassuel@protonmail.com" },
+]
+description = "Package for work schedule manager project"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Nassuel/Work_Schedule_Manager"
+"Bug Tracker" = "https://github.com/Nassuel/Work_Schedule_Manager/issues"
